@@ -13,7 +13,7 @@
 // Enable this to show low-level debug messages
 const bool DEBUG_LOGGER_ENABLED = false;
 // Enable this to show info messages(e.g. input matrices\output matrices)
-const bool INFO_LOGGER_ENABLED = true;
+const bool INFO_LOGGER_ENABLED = false;
 const int SQUARE = 2;
 const double NUM_MAX = 10.0;
 
@@ -147,13 +147,25 @@ void print_matrix_blocked_rows(const double *matrix, int size, int block_size) {
             for (int j = 0; j < (size / block_size); j++) { // Block column
                 for (int bj = 0; bj < block_size; bj++) { // In-Block column
                     log_info("%f ",
-                           *(matrix + j * block_size * block_size + i * size * block_size + bi * block_size + bj));
+                             *(matrix + j * block_size * block_size + i * size * block_size + bi * block_size + bj));
                 }
             }
             log_info("]\n");
         }
     }
 }
+
+void set_start(struct timespec *start_time) {
+    clock_gettime(CLOCK_MONOTONIC_RAW, start_time);
+}
+
+void add_time(struct timespec start_time, uint64_t *time_microseconds) {
+    struct timespec end_time;
+    clock_gettime(CLOCK_MONOTONIC_RAW, &end_time);
+    *time_microseconds =+ (end_time.tv_sec - start_time.tv_sec) * 1000000 +
+                         (end_time.tv_nsec - start_time.tv_nsec) / 1000; // microseconds
+}
+
 
 /**
  * Prints column-wise blocked matrix, with column-wise blocks, e.g 4x4 matrix for 2x2 block represented by:
@@ -177,7 +189,7 @@ void print_matrix_blocked_cols_in_rows(const double *matrix, int size, int block
             for (int j = 0; j < (size / block_size); j++) { // Block column
                 for (int bj = 0; bj < block_size; bj++) { // In-Block column
                     log_info("%f ",
-                           *(matrix + bj * block_size + i * size * block_size + bi + j * block_size * block_size));
+                             *(matrix + bj * block_size + i * size * block_size + bi + j * block_size * block_size));
                 }
             }
             log_info("]\n");

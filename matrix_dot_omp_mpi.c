@@ -158,7 +158,11 @@ void local_compute(double *row_block_a, double *col_block_b, int matrix_size, do
 int main(int argc, char **argv) {
     int num_nodes, matrix_size, node_rank;
     parse_matrix_size(argc, argv, &matrix_size);
-    struct timespec start, end, start_sync, end_sync;
+    struct timespec start_total, start_sync;
+    uint64_t time_total = 0.;
+    uint64_t time_transfer = 0.;
+
+    set_start(&start_total);
 
     // Initializes MPI here
     init_mpi(&argc, &argv, &num_nodes, &node_rank);
@@ -180,6 +184,7 @@ int main(int argc, char **argv) {
 
     // Generating and distributing matrix A
     double *block_a = malloc(block_size * sizeof(double));
+    if (node_rank == ROOT_NODE_RANK) set_start(&start_sync);
     if (node_rank == ROOT_NODE_RANK) log_info("Generating and distributing matrix A:\n");
     generate_and_distribute_matrix(node_rank, matrix_size, block_a, block_size, print_matrix_blocked_rows);
     if (node_rank == ROOT_NODE_RANK) log_debug("Matrix A distributed successfully\n");
@@ -212,6 +217,7 @@ int main(int argc, char **argv) {
     log_debug("Done: Node(global) %d(grid %dx%d) synchronizing matrix B col %d\n", node_rank, node_row, node_col,
               node_col);
     if (node_rank == ROOT_NODE_RANK) {
+        add_time(start_sync, &time_transfer);
         log_debug("Root node blocked B col\n");
         print_row_blocked_col(block_col_b, matrix_size, (int) sqrt(block_size));
     }
@@ -228,12 +234,20 @@ int main(int argc, char **argv) {
     }
 
     double *matrix_c;
-    if (node_rank == ROOT_NODE_RANK) matrix_c = malloc(matrix_size * matrix_size * sizeof(double));
+    if (node_rank == ROOT_NODE_RANK) {
+        matrix_c = malloc(matrix_size * matrix_size * sizeof(double));
+        set_start(&start_sync);
+    }
     MPI_Gather(block_c, block_size, MPI_DOUBLE, matrix_c, block_size, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    if (node_rank == ROOT_NODE_RANK) add_time(start_sync, &time_transfer);
+    add_time(start_total, &time_total);
+
     free(block_c);
     if (node_rank == ROOT_NODE_RANK) {
         log_info("Matrix C:\n");
         print_matrix_blocked_rows(matrix_c, matrix_size, (int) sqrt(block_size));
+        free(matrix_c);
+        printf("%d;%d;%llu;%llu\n", matrix_size, num_nodes, time_transfer, time_total);
     }
     MPI_Finalize();
 }
