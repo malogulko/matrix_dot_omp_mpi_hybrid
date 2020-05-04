@@ -1,14 +1,13 @@
 //
-// Created by Malogulko, Alexey on 21/04/2020.
-//
-
-//
 // Created by Malogulko, Alexey on 01/03/2020.
 // This is just shared code for other matrix multipliers
 //
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <math.h>
+#include <stdbool.h>
+#include <time.h>
 
 // Enable this to show low-level debug messages
 const bool DEBUG_LOGGER_ENABLED = false;
@@ -162,7 +161,7 @@ void set_start(struct timespec *start_time) {
 void add_time(struct timespec start_time, uint64_t *time_microseconds) {
     struct timespec end_time;
     clock_gettime(CLOCK_MONOTONIC_RAW, &end_time);
-    *time_microseconds =+ (end_time.tv_sec - start_time.tv_sec) * 1000000 +
+    *time_microseconds = +(end_time.tv_sec - start_time.tv_sec) * 1000000 +
                          (end_time.tv_nsec - start_time.tv_nsec) / 1000; // microseconds
 }
 
