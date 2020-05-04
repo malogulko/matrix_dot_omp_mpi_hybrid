@@ -1,0 +1,83 @@
+# Prerequisites
+*.d
+
+# Object files
+*.o
+*.ko
+*.obj
+*.elf
+
+# Linker output
+*.ilk
+*.map
+*.exp
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Libraries
+*.lib
+*.a
+*.la
+*.lo
+
+# Shared objects (inc. Windows DLLs)
+*.dll
+*.so
+*.so.*
+*.dylib
+
+# Executables
+*.exe
+*.out
+*.app
+*.i*86
+*.x86_64
+*.hex
+
+# Debug files
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+# Kernel Module Compile Results
+*.mod*
+*.cmd
+.tmp_versions/
+modules.order
+Module.symvers
+Mkfile.old
+dkms.conf
+
+# Mac
+.DS_Store
+.idea
+
+#Jupyter
+/.ipynb_checkpoints
+
+#Publisher
+*.aux
+*.fdb_latexmk
+*.fls
+*.log
+*.pdf
+*.synctex.gz
+*.tex
+*.toc
+Blocked IJK bias performance analyses_files
+
+# Data
+blocked_ijk.csv
+blocked_kij.csv
+ijk.csv
+
+# Cmake
+/.build/
+/cmake-build-debug/
+/CMakeFiles/
+/cmake_install.cmake
+/CMakeCache.txt
+/Makefile
