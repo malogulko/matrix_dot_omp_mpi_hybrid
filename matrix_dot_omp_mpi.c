@@ -84,34 +84,38 @@ void generate_and_distribute_matrix(
 
 /**
  *
+ * Classic IJK multiplication for {@param matrix_size}x{@param matrix_size} square matrix. For 4x4 matrix:
  *
- * A: 01 02 03 04 represents:
+ * {@param matrix_a} and {@param matrix_c}: 01 02 03 04 represents:
  *
  * 01 02
  * 03 04
  *
- * B: 01 02 03 04 represents:
+ * {@param matrix_b}: 01 02 03 04 represents:
  *
  * 01 03
  * 02 04
  *
  */
-void ijk(const double *matrix_a, const double *matrix_b, double *matrix_c, int matrix_size) {
-    for (int i = 0; i < matrix_size; i++) { // Matrix A/C row
-        for (int j = 0; j < matrix_size; j++) { // Matrix B/C col
-            double *c_sum = matrix_c + i * matrix_size + j;
-            for (int k = 0; k < matrix_size; k++) { // A - column, C - row
-                *(c_sum) += *(matrix_a + i * matrix_size + k) * *(matrix_b + j * matrix_size + k);
+void ijk_parallel(const double *matrix_a, const double *matrix_b, double *matrix_c, int matrix_size, int node_rank) {
+    int i, j, k;
+    log_debug_omp("Node %d Starting OMP for max threads %d\n", node_rank, omp_get_max_threads());
+#pragma omp parallel shared(matrix_a, matrix_b, matrix_c, matrix_size) private(i, j, k)
+    {
+#pragma omp for schedule(static)
+        for (i = 0; i < matrix_size; i++) { // Matrix A/C row
+            for (j = 0; j < matrix_size; j++) { // Matrix B/C col
+                double *c_sum = matrix_c + i * matrix_size + j;
+                for (k = 0; k < matrix_size; k++) { // A - column, C - row
+                    *(c_sum) += *(matrix_a + i * matrix_size + k) * *(matrix_b + j * matrix_size + k);
+                }
             }
         }
     }
 }
 
 /**
- * Because stripes of matrices A and B are already a multiple of blocks, we can use blocking partitioning here
- * (this would also optimize caching on multi-socket systems).
- *
- * Basically, this method takes in:
+ * This method takes in:
  *
  * A: 01 02 03 04 05 06 07 08 representing:
  *
@@ -131,28 +135,14 @@ void ijk(const double *matrix_a, const double *matrix_b, double *matrix_c, int m
  * 03 04
  *
  */
-void local_compute(double *row_block_a, double *col_block_b, int matrix_size, double *block_c, int block_size) {
+void local_compute(double *row_block_a, double *col_block_b, int matrix_size, double *block_c, int block_size,
+                   int node_rank) {
     int block_width = (int) sqrt(block_size);
     int num_blocks = matrix_size / block_width;
-#pragma omp parallel num_threads(num_blocks)
-    {
-        // This has to be allocated manually to avoid memory contingency
-        double *block_c_private = malloc_zero_matrix(block_size);
-
-        // Every thread is calculating it's own block_c_private
-#pragma omp for
-        for (int k = 0; k < num_blocks; k += 1) { // K is a block number
-            log_debug("thread id = %d runs for k = %d\n", omp_get_thread_num(), k);
-            int offset = k * block_size; // Memory offset
-            ijk(row_block_a + offset, col_block_b + offset, block_c_private, block_width);
-        }
-        // Sequentially merging the results
-#pragma omp critical
-        {
-            for (int n = 0; n < block_size; ++n) {
-                *(block_c + n) += *(block_c_private + n);
-            }
-        }
+    for (int k = 0; k < num_blocks; k += 1) { // K is a block number
+        log_debug("Node %d calculating block %d block of local C\n", node_rank, k);
+        int offset = k * block_size; // Memory offset
+        ijk_parallel(row_block_a + offset, col_block_b + offset, block_c, block_width, node_rank);
     }
 }
 
@@ -224,7 +214,7 @@ int main(int argc, char **argv) {
     }
 
     double *block_c = malloc_zero_matrix(block_size);
-    local_compute(block_row_a, block_col_b, matrix_size, block_c, block_size);
+    local_compute(block_row_a, block_col_b, matrix_size, block_c, block_size, node_rank);
     // No need to keep this in memory anymore
     free(block_row_a);
     free(block_col_b);

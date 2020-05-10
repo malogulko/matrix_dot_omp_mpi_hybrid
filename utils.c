@@ -13,8 +13,18 @@
 const bool DEBUG_LOGGER_ENABLED = false;
 // Enable this to show info messages(e.g. input matrices\output matrices)
 const bool INFO_LOGGER_ENABLED = false;
+const bool OMP_LOGGER_ENABLED = false;
 const int SQUARE = 2;
 const double NUM_MAX = 10.0;
+
+void log_debug_omp(const char *fmt, ...) {
+    if (OMP_LOGGER_ENABLED) {
+        va_list argptr;
+        va_start(argptr, fmt);
+        vfprintf(stdout, fmt, argptr);
+        va_end(argptr);
+    }
+}
 
 void log_debug(const char *fmt, ...) {
     if (DEBUG_LOGGER_ENABLED) {
